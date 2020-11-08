@@ -887,7 +887,7 @@ class App extends Component {
                           }}
                         >
                           <MyLocation style={{ height: 18 }} />
-                          <Typography>&nbsp;&nbsp;Dora Mode</Typography>
+                          <Typography>&nbsp;&nbsp;Map</Typography>
                         </div>
                       ) : (
                         <Typography>Dora</Typography>

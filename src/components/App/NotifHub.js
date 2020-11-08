@@ -72,7 +72,6 @@ class NotifHub extends Component {
         command: 'lookup',
       }).toString();
       url = url + '?' + params;
-      console.log('asdasd');
 
       await fetch(url)
         .then((resp) => resp.json())
@@ -137,23 +136,6 @@ class NotifHub extends Component {
 
           <DialogContent dividers={true}>
             <DialogContentText id="content">
-              {this.state.email === null ? (
-                <p>You have not signed up for any email notifications!</p>
-              ) : (
-                <div>
-                  <p>Watchlist for {this.state.email}:</p>
-                  <ul>
-                    {this.state.email_wl.map((course) => {
-                      return (
-                        <li id={course.code}>
-                          {course.name}: {course.code}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-
               {this.state.sms === null ? (
                 <p>You have not signed up for any SMS notifications!</p>
               ) : (

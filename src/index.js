@@ -3,7 +3,6 @@ import { hydrate, render } from 'react-dom';
 import App from './components/App/App';
 import { MuiThemeProvider, createMuiTheme } from '@material-ui/core/styles';
 import { unregister } from './registerServiceWorker';
-import { initializeFirebase, pushNotifyForeground } from './push-notification';
 
 const theme = createMuiTheme({
   typography: {
@@ -54,6 +53,5 @@ if (rootElement.hasChildNodes()) {
     rootElement
   );
 }
-initializeFirebase();
-pushNotifyForeground();
+
 unregister();

@@ -111,7 +111,7 @@ class CustomizedSnackbars extends React.Component {
   render() {
     return (
       <Fragment>
-        {this.props.termName === '2020 Spring' ? (
+        {this.props.termName === '2021 Winter' ? (
           <SPopover
             //handleSave={this.handleSave}
             full={this.props.full}

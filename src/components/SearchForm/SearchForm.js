@@ -94,7 +94,7 @@ class SearchForm extends Component {
         dept: '',
         label: '',
         ge: 'ANY',
-        term: '2020 Spring',
+        term: '2021 Winter',
         courseNum: '',
         courseCode: '',
         instructor: '',

@@ -46,9 +46,7 @@ function OptOutPopover(props) {
               >
                 {' '}
                 {/* For desktop mode only*/}
-                <Badge color="secondary" variant="dot">
-                  <Settings />
-                </Badge>
+                <Settings />
                 {props.isDesktop ? (
                   <Typography color="inherit">&nbsp;&nbsp;Ratings</Typography>
                 ) : (

@@ -15,7 +15,6 @@ import {
   FormControl,
 } from '@material-ui/core';
 import SMS from './smsInput';
-import { askForPermissionToReceiveNotifications } from '../../push-notification';
 
 const styles = (theme) => ({
   typography: {
@@ -101,39 +100,6 @@ class SPopover extends React.Component {
     // alert(email+" added to the notification list for "+ code +" !!!")
   };
 
-  /* Signs up the specific device to receive notifications using token */
-  getMeSpotPush = () => {
-    const code = this.props.code;
-    const token = this.state.cachePushToken;
-    const name = this.props.name[1] + ' ' + this.props.name[2];
-
-    if (token.length < 15) {
-      this.setState({
-        addPushMessageOn: true,
-        validPushToken: false,
-        cachePushToken: null,
-      });
-      window.localStorage.setItem('cachePushToken', null);
-    } else {
-      let url =
-        'https://3jbsyx3se1.execute-api.us-west-1.amazonaws.com/dev/pushnotif/';
-      url = url + code + '/' + name + '/' + token;
-      fetch(url);
-      this.setState({ addPushMessageOn: true, validPushToken: true });
-    }
-  };
-
-  /* Caches token and closes popover */
-  getPushToken = async () => {
-    const token = await askForPermissionToReceiveNotifications(); //get push token
-    window.localStorage.setItem('token', token); //cache token
-    this.setState({ cachePushToken: token }); //save token in state
-    fetch(
-      'https://3jbsyx3se1.execute-api.us-west-1.amazonaws.com/dev/testpush/' +
-        token
-    ); //test push notif
-  };
-
   inputChange = (event) => {
     if (!event) event = window.event;
     event.cancelBubble = true;
@@ -181,29 +147,6 @@ class SPopover extends React.Component {
             Get notified when a spot opens!
           </Typography>
 
-          {/* Added Messages */}
-          {this.state.addEmailMessageOn ? (
-            <Typography className={classes.typography}>
-              <p>
-                <font color="green">Added email to watchlist!!!</font>
-              </p>
-            </Typography>
-          ) : null}
-
-          {this.state.addPushMessageOn ? (
-            <Typography className={classes.typography}>
-              <p>
-                {this.state.validPushToken ? (
-                  <font color="green">Added device to watchlist!!!</font>
-                ) : (
-                  <font color="red">
-                    Push notif was not set up correctly. Please try again!
-                  </font>
-                )}
-              </p>
-            </Typography>
-          ) : null}
-
           <div className={classes.container}>
             {/* Email Notifications
             <FormControl className={classes.formControl}>
@@ -236,71 +179,6 @@ class SPopover extends React.Component {
               cacheSMS={this.state.cacheSMS}
               name={this.props.name}
             />
-
-            {/* Push Notifications */}
-            <Typography className={classes.typography}>
-              Push and email notifications are under maintenance!
-              <br />
-              Please use SMS notifications.
-              <br />
-              Sorry for the inconvenience; please check back next quarter!
-            </Typography>
-            {/* <FormControl
-              className={classes.container}
-              style={{ width: '100%' }}
-            >
-              <Typography color="inherit" style={{ marginLeft: 10 }}>
-                Push Notification
-              </Typography>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  width: '100%',
-                }}
-              >
-                <Button
-                  onClick={() => this.setState({ open: true })}
-                  color="inherit"
-                  style={{ flexGrow: 1 }}
-                >
-                  Help
-                </Button>
-                {this.state.cachePushToken === null ||
-                this.state.cachePushToken.length < 15 ? (
-                  <Button
-                    variant="text"
-                    color="primary"
-                    className={classes.button}
-                    onClick={this.getPushToken}
-                  >
-                    Register Device
-                  </Button>
-                ) : (
-                  <div>
-                    <Button
-                      variant="text"
-                      className={classes.button}
-                      onClick={() => {
-                        fetch(
-                          'https://3jbsyx3se1.execute-api.us-west-1.amazonaws.com/dev/testpush/' +
-                            this.state.cachePushToken
-                        );
-                      }}
-                    >
-                      Test
-                    </Button>
-                    <Button
-                      variant="text"
-                      color="primary"
-                      className={classes.button}
-                      onClick={this.getMeSpotPush}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </FormControl> */}
           </div>
         </Popover>
 
