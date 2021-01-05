@@ -28,6 +28,8 @@ const quartersFirstMondays = {
   '2019 Fall': 'September 30, 2019',
   '2020 Winter': 'January 6, 2020',
   '2020 Spring': 'March 30, 2020',
+  '2020 Fall': 'October 5, 2020',
+  '2021 Winter': 'January 4, 2021',
 };
 
 function ExportButton(props) {
