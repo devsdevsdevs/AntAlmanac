@@ -43,7 +43,7 @@ export default class UCIMap extends PureComponent {
         selected: null,
         selected_img: '',
         selected_acronym: '',
-        eventsInCalendar: AppStore.getEventsInCalendar(),
+        addedCourses: AppStore.getAddedCourses(),
         currentScheduleIndex: AppStore.getCurrentScheduleIndex(),
     };
 
@@ -73,20 +73,19 @@ export default class UCIMap extends PureComponent {
         // Tracks courses that have already been pinned on the map, so there are no duplicates
         let pinnedCourses = new Set();
 
-        this.state.eventsInCalendar.forEach((event) => {
+        this.state.addedCourses.forEach((event) => {
             // Filter out those in a different schedule or those not on a certain day (mon, tue, etc)
             if (
-                event.isCustomEvent ||
                 !event.scheduleIndices.includes(this.state.currentScheduleIndex) ||
-                !event.start.toString().includes(DAYS[this.state.day])
+                !(this.state.day == 0 || event.section.meetings[0].days.toString().includes(DAYS[this.state.day][0]))
             )
                 return;
 
             // Get building code, get id of building code, which will get us the building data from buildingCatalogue
-            const buildingCode = event.bldg.split(' ')[0];
+            const buildingCode = event.section.meetings[0].bldg.split(' ')[0];
             const id = locations[buildingCode];
             const locationData = buildingCatalogue[id];
-            const courseString = `${event.title} ${event.sectionType} @ ${event.bldg}`;
+            const courseString = `${event.courseTitle} ${event.sectionType} @ ${event.section.meetings[0].bldg}`;
 
             if (locationData === undefined || pinnedCourses.has(courseString)) return;
 
@@ -99,11 +98,11 @@ export default class UCIMap extends PureComponent {
             pinnedCourses.add(courseString);
 
             const classEntry = (
-                <Fragment key={event.sectionCode}>
+                <Fragment key={event.section.sectionCode}>
                     <hr />
-                    Class: {`${event.title} ${event.sectionType}`}
+                    Class: {`${event.deptCode} ${event.courseNumber} ${event.section.sectionType}`}
                     <br />
-                    Room: {event.bldg.split(' ')[1]}
+                    Room: {event.section.meetings[0].bldg.split(' ')[1]}
                 </Fragment>
             );
 
