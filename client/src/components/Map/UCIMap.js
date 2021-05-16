@@ -98,23 +98,36 @@ export default class UCIMap extends PureComponent {
 
             pinnedCourses.add(courseString);
 
-            markers.push(
-                <MapMarkerPopup
-                    image={locationData.imageURLs[0]}
-                    markerColor={event.color}
-                    location={locationData.name}
-                    lat={locationData.lat}
-                    lng={locationData.lng}
-                    acronym={acronym}
-                >
-                    <Fragment>
-                        <hr />
-                        Class: {`${event.title} ${event.sectionType}`}
-                        <br />
-                        Room: {event.bldg.split(' ')[1]}
-                    </Fragment>
-                </MapMarkerPopup>
+            const classEntry = (
+                <Fragment key={event.sectionCode}>
+                    <hr />
+                    Class: {`${event.title} ${event.sectionType}`}
+                    <br />
+                    Room: {event.bldg.split(' ')[1]}
+                </Fragment>
             );
+
+            // If a marker exists at this location, add class to it
+            let marker = markers.filter((marker) => marker.props.location === locationData.name)[0];
+            if (marker) {
+                marker.props.classes.push(classEntry);
+            } else {
+                marker = (
+                    <MapMarkerPopup
+                        key={locationData.name}
+                        image={locationData.imageURLs[0]}
+                        markerColor={event.color}
+                        location={locationData.name}
+                        lat={locationData.lat}
+                        lng={locationData.lng}
+                        acronym={acronym}
+                        classes={[classEntry]}
+                    >
+                        {' '}
+                    </MapMarkerPopup>
+                );
+                markers.push(marker);
+            }
         });
 
         return markers;

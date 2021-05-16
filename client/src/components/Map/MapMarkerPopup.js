@@ -60,7 +60,7 @@ class MapMarkerPopup extends PureComponent {
                         />
                     ) : null}
 
-                    {this.props.children}
+                    {this.props.classes}
 
                     <br />
 
@@ -87,6 +87,7 @@ MapMarkerPopup.propTypes = {
     lat: PropTypes.number.isRequired,
     lng: PropTypes.number.isRequired,
     acronym: PropTypes.string.isRequired,
+    classes: PropTypes.array,
 };
 
 export default MapMarkerPopup;
