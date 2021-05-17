@@ -77,7 +77,7 @@ export default class UCIMap extends PureComponent {
             // Filter out those in a different schedule or those not on a certain day (mon, tue, etc)
             if (
                 !event.scheduleIndices.includes(this.state.currentScheduleIndex) ||
-                !(this.state.day == 0 || event.section.meetings[0].days.toString().includes(DAYS[this.state.day][0]))
+                !(this.state.day === 0 || event.section.meetings[0].days.toString().includes(DAYS[this.state.day][0]))
             )
                 return;
 
@@ -121,9 +121,7 @@ export default class UCIMap extends PureComponent {
                         lng={locationData.lng}
                         acronym={acronym}
                         classes={[classEntry]}
-                    >
-                        {' '}
-                    </MapMarkerPopup>
+                    ></MapMarkerPopup>
                 );
                 markers.push(marker);
             }
