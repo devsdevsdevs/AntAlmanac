@@ -1,11 +1,12 @@
 import React, { Fragment, PureComponent } from 'react';
-import { Map, TileLayer, withLeaflet } from 'react-leaflet';
+import { Map, TileLayer, withLeaflet, Polyline, Marker } from 'react-leaflet';
 import buildingCatalogue from './static/buildingCatalogue';
 import locations from '../SectionTable/static/locations.json';
 import AppStore from '../../stores/AppStore';
 import DayTabs from './MapTabsAndSearchBar';
 import MapMarkerPopup from './MapMarkerPopup';
 import Locate from 'leaflet.locatecontrol';
+import Leaflet from 'leaflet';
 
 class LocateControl extends PureComponent {
     componentDidMount() {
@@ -32,6 +33,7 @@ const DAYS = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const ACCESS_TOKEN = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
 const ATTRIBUTION_MARKUP =
     '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Images from <a href="https://map.uci.edu/?id=463">UCI Map</a>';
+const DIRECTIONS_ENDPOINT = 'https://api.mapbox.com/directions/v5/mapbox/walking/';
 
 export default class UCIMap extends PureComponent {
     state = {
@@ -45,6 +47,125 @@ export default class UCIMap extends PureComponent {
         selected_acronym: '',
         eventsInCalendar: AppStore.getEventsInCalendar(),
         currentScheduleIndex: AppStore.getCurrentScheduleIndex(),
+        poly: [],
+    };
+
+    getRoute = (day) => {
+        let index = 0;
+        let coords = '';
+        let coords_array = [];
+        let colors = [];
+        this.state.eventsInCalendar
+            .sort((event, event2) => event.start - event2.start)
+            .forEach((event) => {
+                // Filter out those in a different schedule or those not on a certain day (mon, tue, etc)
+                if (
+                    event.isCustomEvent ||
+                    !event.scheduleIndices.includes(this.state.currentScheduleIndex) ||
+                    !event.start.toString().includes(DAYS[day])
+                )
+                    return;
+
+                // Get building code, get id of building code, which will get us the building data from buildingCatalogue
+                const buildingCode = event.bldg.split(' ')[0];
+                const id = locations[buildingCode];
+                const locationData = buildingCatalogue[id];
+
+                if (locationData === undefined) return;
+
+                colors.push(event.color);
+
+                if (day) {
+                    if (coords) coords += ';';
+                    coords += locationData.lng + ',' + locationData.lat;
+                    coords_array.push([locationData.lat, locationData.lng]);
+                }
+                index++;
+            });
+        if (day && index > 1) {
+            var url = new URL(DIRECTIONS_ENDPOINT + encodeURIComponent(coords));
+
+            url.search = new URLSearchParams({
+                alternatives: false,
+                geometries: 'geojson',
+                steps: false,
+                access_token: ACCESS_TOKEN,
+            }).toString();
+
+            fetch(url, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            }).then((response) => {
+                response.json().then((obj) => {
+                    let latlng = obj['routes'][0]['geometry']['coordinates'];
+                    let waypoint = 0;
+                    let path = [
+                        [[obj['waypoints'][waypoint]['location'][1], obj['waypoints'][waypoint]['location'][0]]],
+                    ];
+                    let poly = [];
+                    poly.push(<Polyline color={colors[0]} positions={[path[0][0], coords_array[0]]} dashArray="4" />);
+
+                    for (let i of latlng) {
+                        path[waypoint].push([i[1], i[0]]);
+                        if (
+                            i[0] === obj['waypoints'][waypoint]['location'][0] &&
+                            i[1] === obj['waypoints'][waypoint]['location'][1]
+                        ) {
+                            path.push([[i[1], i[0]]]);
+                            if (waypoint != 0) {
+                                poly.push(<Polyline color={colors[waypoint - 1]} positions={path[waypoint]} />);
+                                poly.push(
+                                    <Polyline
+                                        color={colors[waypoint - 1]}
+                                        positions={[path[waypoint][path[waypoint].length - 1], coords_array[waypoint]]}
+                                        dashArray="4"
+                                    />
+                                );
+                                poly.push(
+                                    <Marker
+                                        position={path[waypoint][Math.floor(path[waypoint].length / 2)]}
+                                        icon={Leaflet.divIcon({
+                                            iconAnchor: [0, 14],
+                                            labelAnchor: [-3.5, 0],
+                                            popupAnchor: [0, -21],
+                                            className: '',
+                                            iconSize: [1000, 14],
+                                            html: `<div style="background-color: white;border-left-color: ${
+                                                colors[waypoint - 1]
+                                            };border-left-style: solid;width: fit-content;border-left-width: 5px;padding-left: 10px;padding-right: 10px;padding-top: 4px;padding-bottom: 4px;">
+                                    <span style="color:${colors[waypoint - 1]}"> ${
+                                                obj['routes'][0]['legs'][waypoint - 1]['duration'] > 30
+                                                    ? Math.round(
+                                                          obj['routes'][0]['legs'][waypoint - 1]['duration'] / 60
+                                                      ).toString() + ' min'
+                                                    : '<1 min'
+                                            } </span>
+                                    <br>
+                                    <span style="color:#888888">
+                                                ${
+                                                    (
+                                                        Math.floor(
+                                                            obj['routes'][0]['legs'][waypoint - 1]['distance'] /
+                                                                1.609 /
+                                                                10
+                                                        ) / 100
+                                                    ).toString() + ' mi'
+                                                }
+                                                </span>
+                                            </div>`,
+                                        })}
+                                    ></Marker>
+                                );
+                            }
+                            waypoint++;
+                        }
+                    }
+                    this.setState({ poly: poly });
+                });
+            });
+        } else {
+            this.setState({ poly: [] });
+        }
     };
 
     updateCurrentScheduleIndex = () => {
@@ -72,51 +193,55 @@ export default class UCIMap extends PureComponent {
 
         // Tracks courses that have already been pinned on the map, so there are no duplicates
         let pinnedCourses = new Set();
+        let index = 0;
 
-        this.state.eventsInCalendar.forEach((event) => {
-            // Filter out those in a different schedule or those not on a certain day (mon, tue, etc)
-            if (
-                event.isCustomEvent ||
-                !event.scheduleIndices.includes(this.state.currentScheduleIndex) ||
-                !event.start.toString().includes(DAYS[this.state.day])
-            )
-                return;
+        this.state.eventsInCalendar
+            .sort((event, event2) => event.start - event2.start)
+            .forEach((event) => {
+                // Filter out those in a different schedule or those not on a certain day (mon, tue, etc)
+                if (
+                    event.isCustomEvent ||
+                    !event.scheduleIndices.includes(this.state.currentScheduleIndex) ||
+                    !event.start.toString().includes(DAYS[this.state.day])
+                )
+                    return;
 
-            // Get building code, get id of building code, which will get us the building data from buildingCatalogue
-            const buildingCode = event.bldg.split(' ')[0];
-            const id = locations[buildingCode];
-            const locationData = buildingCatalogue[id];
-            const courseString = `${event.title} ${event.sectionType} @ ${event.bldg}`;
+                // Get building code, get id of building code, which will get us the building data from buildingCatalogue
+                const buildingCode = event.bldg.split(' ')[0];
+                const id = locations[buildingCode];
+                const locationData = buildingCatalogue[id];
+                const courseString = `${event.title} ${event.sectionType} @ ${event.bldg}`;
 
-            if (locationData === undefined || pinnedCourses.has(courseString)) return;
+                if (locationData === undefined || pinnedCourses.has(courseString)) return;
 
-            // Acronym, if it exists, is in between parentheses
-            const acronym = locationData.name.substring(
-                locationData.name.indexOf('(') + 1,
-                locationData.name.indexOf(')')
-            );
+                // Acronym, if it exists, is in between parentheses
+                const acronym = locationData.name.substring(
+                    locationData.name.indexOf('(') + 1,
+                    locationData.name.indexOf(')')
+                );
 
-            pinnedCourses.add(courseString);
+                pinnedCourses.add(courseString);
 
-            markers.push(
-                <MapMarkerPopup
-                    image={locationData.imageURLs[0]}
-                    markerColor={event.color}
-                    location={locationData.name}
-                    lat={locationData.lat}
-                    lng={locationData.lng}
-                    acronym={acronym}
-                >
-                    <Fragment>
-                        <hr />
-                        Class: {`${event.title} ${event.sectionType}`}
-                        <br />
-                        Room: {event.bldg.split(' ')[1]}
-                    </Fragment>
-                </MapMarkerPopup>
-            );
-        });
-
+                markers.push(
+                    <MapMarkerPopup
+                        image={locationData.imageURLs[0]}
+                        markerColor={event.color}
+                        location={locationData.name}
+                        lat={locationData.lat}
+                        lng={locationData.lng}
+                        acronym={acronym}
+                        index={this.state.day ? (index + 1).toString() : ''}
+                    >
+                        <Fragment>
+                            <hr />
+                            Class: {`${event.title} ${event.sectionType}`}
+                            <br />
+                            Room: {event.bldg.split(' ')[1]}
+                        </Fragment>
+                    </MapMarkerPopup>
+                );
+                index++;
+            });
         return markers;
     };
 
@@ -158,6 +283,7 @@ export default class UCIMap extends PureComponent {
                         day={this.state.day}
                         setDay={(day) => {
                             this.setState({ day: day });
+                            this.getRoute(day);
                         }}
                         handleSearch={this.handleSearch}
                     />
@@ -173,6 +299,8 @@ export default class UCIMap extends PureComponent {
 
                     {this.createMarkers()}
 
+                    {this.state.poly}
+
                     {this.state.selected ? (
                         <MapMarkerPopup
                             image={this.state.selected_img}
@@ -181,6 +309,7 @@ export default class UCIMap extends PureComponent {
                             lng={this.state.lng}
                             acronym={this.state.selected_acronym}
                             markerColor="#FF0000"
+                            index=""
                         />
                     ) : null}
                 </Map>
